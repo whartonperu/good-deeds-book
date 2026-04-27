@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>My Good Deeds Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --parchment: #f5e9d0;
+    --parchment-dark: #ead8b1;
+    --ink: #4a2c1a;
+    --ink-soft: #7a5840;
+    --gold: #d4a341;
+    --gold-deep: #a87a1f;
+    --berry: #b94a4a;
+    --leaf: #6b8e3d;
+    --shadow: rgba(74, 44, 26, 0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; }
+
+  body {
+    background: var(--parchment);
+    color: var(--ink);
+    font-family: 'Patrick Hand', 'Comic Sans MS', cursive;
+    font-size: 18px;
+    line-height: 1.5;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(212, 163, 65, 0.12), transparent 35%),
+      radial-gradient(circle at 85% 70%, rgba(185, 74, 74, 0.08), transparent 35%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.29 0 0 0 0 0.17 0 0 0 0 0.10 0 0 0 0.08 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  }
+
+  .page {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+    position: relative;
+  }
+
+  .cover { text-align: center; padding: 12px 0 28px; position: relative; }
+
+  .eyebrow {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 16px;
+    color: var(--ink-soft);
+    transform: rotate(-2deg);
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-family: 'Caveat Brush', cursive;
+    font-size: clamp(48px, 13vw, 68px);
+    line-height: 0.95;
+    color: var(--ink);
+    text-shadow: 3px 3px 0 var(--gold), 4px 4px 0 var(--ink);
+    transform: rotate(-1.5deg);
+  }
+  h1 .gold { color: var(--gold-deep); }
+
+  .stamp {
+    position: absolute;
+    top: -6px; right: 10px;
+    width: 70px; height: 70px;
+    transform: rotate(12deg);
+    opacity: 0.9;
+  }
+
+  .jar-card {
+    background: linear-gradient(180deg, #fef6e3 0%, #f7e6c2 100%);
+    border: 3px solid var(--ink);
+    border-radius: 28px;
+    padding: 24px 20px 28px;
+    margin-top: 20px;
+    box-shadow: 6px 6px 0 var(--ink), 0 12px 24px var(--shadow);
+    position: relative;
+    transform: rotate(-0.6deg);
+  }
+
+  .jar-card::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 12px; right: 12px; bottom: 12px;
+    border: 2px dashed var(--ink-soft);
+    border-radius: 20px;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  .jar-label {
+    text-align: center;
+    font-family: 'Caveat Brush', cursive;
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .jar-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    margin: 8px 0 16px;
+  }
+
+  .jar-svg {
+    width: 180px; height: 200px;
+    filter: drop-shadow(3px 4px 0 var(--shadow));
+    animation: wobble 4s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  @keyframes wobble {
+    0%, 100% { transform: rotate(-1deg); }
+    50%      { transform: rotate(1deg); }
+  }
+
+  .total-readout { text-align: center; margin-top: 4px; }
+
+  .total-readout .amt {
+    font-family: 'Caveat Brush', cursive;
+    font-size: 64px;
+    color: var(--gold-deep);
+    line-height: 1;
+    text-shadow: 2px 2px 0 var(--ink);
+    display: inline-block;
+    transform: rotate(-1deg);
+  }
+
+  .total-readout .sub {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
+  .section-title {
+    font-family: 'Caveat Brush', cursive;
+    font-size: 36px;
+    margin: 36px 0 16px;
+    text-align: center;
+    transform: rotate(-1deg);
+  }
+  .section-title::before, .section-title::after {
+    content: '✦';
+    color: var(--gold-deep);
+    margin: 0 12px;
+    font-size: 22px;
+    vertical-align: 6px;
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  .row-card {
+    background: #fff8e8;
+    border: 2.5px solid var(--ink);
+    border-radius: 22px;
+    padding: 16px 18px;
+    box-shadow: 4px 4px 0 var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: transform 0.2s;
+  }
+  .row-card:nth-child(odd)  { transform: rotate(-0.7deg); }
+  .row-card:nth-child(even) { transform: rotate(0.7deg); }
+  .row-card:nth-child(3n)   { transform: rotate(-0.3deg); }
+  .row-card:active { transform: scale(0.98) rotate(0deg); }
+
+  .row-icon {
+    width: 56px; height: 56px;
+    flex-shrink: 0;
+    background: var(--gold);
+    border: 2.5px solid var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    box-shadow: inset -3px -4px 0 rgba(74,44,26,0.15);
+  }
+
+  .row-body { flex: 1; min-width: 0; }
+
+  .row-name {
+    font-family: 'Caveat Brush', cursive;
+    font-size: 26px;
+    line-height: 1.05;
+    word-wrap: break-word;
+  }
+
+  .row-meta {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .row-amount {
+    font-family: 'Caveat Brush', cursive;
+    font-size: 30px;
+    color: var(--gold-deep);
+    text-shadow: 1.5px 1.5px 0 var(--ink);
+    flex-shrink: 0;
+  }
+  .row-amount.neg { color: var(--berry); }
+
+  .bar-wrap {
+    height: 12px;
+    background: var(--parchment-dark);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: repeating-linear-gradient(45deg, var(--gold) 0 8px, var(--gold-deep) 8px 16px);
+    border-right: 2px solid var(--ink);
+    transition: width 0.9s cubic-bezier(.2,.9,.3,1);
+  }
+
+  .status {
+    text-align: center;
+    padding: 40px 20px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 20px;
+    color: var(--ink-soft);
+  }
+  .status.error {
+    color: var(--berry);
+    background: #fff8e8;
+    border: 2.5px dashed var(--berry);
+    border-radius: 22px;
+    margin: 16px 0;
+  }
+
+  .footer-hand {
+    text-align: center;
+    margin-top: 36px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 16px;
+    color: var(--ink-soft);
+  }
+
+  .reload-btn {
+    display: inline-block;
+    background: var(--berry);
+    color: #fff8e8;
+    border: 2.5px solid var(--ink);
+    border-radius: 999px;
+    padding: 10px 22px;
+    font-family: 'Caveat Brush', cursive;
+    font-size: 22px;
+    box-shadow: 3px 3px 0 var(--ink);
+    cursor: pointer;
+    margin-top: 14px;
+    transition: transform 0.1s;
+  }
+  .reload-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+
+  .confetti { position: fixed; pointer-events: none; inset: 0; overflow: hidden; z-index: 100; }
+  .coin-fall {
+    position: absolute;
+    width: 22px; height: 22px;
+    background: radial-gradient(circle at 35% 30%, #ffe89a, var(--gold) 50%, var(--gold-deep));
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    animation: fall 1.6s cubic-bezier(.4,.1,.7,1) forwards;
+  }
+  @keyframes fall {
+    0% { transform: translateY(-40px) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.7; }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: rise 0.5s cubic-bezier(.2,.9,.3,1) forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  .coins-stack circle {
+    transform-origin: center;
+    animation: pop 0.5s cubic-bezier(.4,1.6,.5,1) backwards;
+  }
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @media (max-width: 380px) {
+    body { font-size: 16px; }
+    h1 { font-size: 44px; }
+    .total-readout .amt { font-size: 54px; }
+    .row-name { font-size: 22px; }
+    .row-amount { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="cover">
+    <span class="eyebrow">~ Chapter One ~</span>
+    <h1>My <span class="gold">Good Deeds</span><br>Book</h1>
+    <svg class="stamp" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="#b94a4a" stroke-width="3" stroke-dasharray="3 4" opacity="0.85"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#b94a4a" stroke-width="2" opacity="0.85"/>
+      <text x="50" y="46" text-anchor="middle" font-family="Caveat Brush, cursive" font-size="14" fill="#b94a4a">SUPER</text>
+      <text x="50" y="62" text-anchor="middle" font-family="Caveat Brush, cursive" font-size="14" fill="#b94a4a">HELPER</text>
+    </svg>
+  </header>
+
+  <section class="jar-card">
+    <div class="jar-label">Coins earned for being kind!</div>
+    <div class="jar-wrap">
+      <svg class="jar-svg" viewBox="0 0 200 220">
+        <rect x="48" y="14" width="104" height="22" rx="6" fill="#b88a4a" stroke="#4a2c1a" stroke-width="3"/>
+        <rect x="52" y="18" width="96" height="6" rx="2" fill="#d4a341" opacity="0.7"/>
+        <path d="M 40 40 Q 40 36 44 36 L 156 36 Q 160 36 160 40 L 160 200 Q 160 210 150 210 L 50 210 Q 40 210 40 200 Z"
+              fill="rgba(255,250,235,0.6)" stroke="#4a2c1a" stroke-width="3.5"/>
+        <path d="M 56 50 L 56 180" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+        <path d="M 70 60 L 70 100" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+        <rect x="86" y="18" width="28" height="4" rx="1" fill="#4a2c1a" opacity="0.6"/>
+        <g class="coins-stack" id="coinsStack"></g>
+        <g transform="translate(100 188) rotate(-3)">
+          <rect x="-36" y="-10" width="72" height="20" rx="3" fill="#fff8e8" stroke="#4a2c1a" stroke-width="2"/>
+          <text x="0" y="5" text-anchor="middle" font-family="Caveat Brush, cursive" font-size="16" fill="#4a2c1a">EARNED</text>
+        </g>
+      </svg>
+    </div>
+    <div class="total-readout">
+      <div class="amt" id="totalAmt">—</div>
+      <div class="sub" id="totalSub">counting up the coins…</div>
+    </div>
+  </section>
+
+  <h2 class="section-title">My good deeds</h2>
+  <div class="stack" id="rowsStack">
+    <div class="status" id="statusBox">📖 Opening the book…</div>
+  </div>
+
+  <div class="footer-hand">
+    <div id="updatedAt">&nbsp;</div>
+    <button class="reload-btn" id="reloadBtn">↻ Read again!</button>
+  </div>
+</div>
+
+<div class="confetti" id="confetti"></div>
+
+<script>
+  // ========================================================================
+  // CONFIG — fill these in
+  // ========================================================================
+  // 1) Sheet must be shared as "Anyone with the link can view"
+  //    (File → Share → General access → Anyone with the link)
+  // 2) SHEET_ID is in the sheet URL:
+  //    https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit#gid=[GID]
+  // 3) Set SHEET_NAME to the tab where the pivot table is.
+  //    Or set SHEET_GID instead — useful when the tab name has spaces.
+  //
+  // The page calls Google's GViz JSON endpoint live every time it loads.
+  // No file is downloaded by the user.
+  // ========================================================================
+  const SHEET_ID   = '1_xlDI2q-_66dnqiFoZyvUIuCxbXtxPB0u1h9fBDYxKA';
+  const SHEET_NAME = 'Pivot Table 1';   // tab name
+  const SHEET_GID  = 34893663;   // OR a gid number, e.g. 123456789. Use null to ignore.
+
+  // Optional column overrides. Use the column header text or column letter.
+  // Leave null to auto-detect (first text column = label, last numeric = amount).
+  const LABEL_COL_OVERRIDE  = null;
+  const AMOUNT_COL_OVERRIDE = null;
+
+  const CURRENCY = 'S/';
+  // ========================================================================
+
+  const ICONS = {
+    allowance:'💵', chore:'🧹', chores:'🧹', gift:'🎁', birthday:'🎂',
+    bonus:'⭐', tooth:'🦷', toothfairy:'🦷', save:'🐷', saving:'🐷',
+    savings:'🐷', spend:'🛍️', spending:'🛍️', toy:'🧸', toys:'🧸',
+    book:'📚', books:'📚', candy:'🍭', sweet:'🍭', sweets:'🍭',
+    food:'🍎', game:'🎮', games:'🎮', icecream:'🍦', 'ice cream':'🍦',
+    sticker:'🌟', stickers:'🌟', help:'🤝', helping:'🤝',
+    grandma:'👵', grandpa:'👴', mom:'👩', dad:'👨', auntie:'🌷',
+    uncle:'🎩', dog:'🐶', cat:'🐱', plant:'🌱', water:'💧',
+    clean:'🧼', dish:'🍽️', dishes:'🍽️', laundry:'🧺', bed:'🛏️',
+    work:'🛠️', job:'🛠️', total:'✨',
+    january:'❄️', february:'💝', march:'🌷', april:'🌧️', may:'🌸',
+    june:'☀️', july:'🎆', august:'🍉', september:'🍂', october:'🎃',
+    november:'🦃', december:'🎄'
+  };
+
+  function pickIcon(label) {
+    const key = String(label || '').toLowerCase().trim();
+    if (ICONS[key]) return ICONS[key];
+    for (const word of key.split(/\s+/)) if (ICONS[word]) return ICONS[word];
+    const fallbacks = ['🌟','🍀','🌈','🎈','🎀','🪙','💝','🌻','🦋','🌸','🧁','🌷'];
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    return fallbacks[h % fallbacks.length];
+  }
+
+  function formatMoney(n) {
+    if (!isFinite(n)) return CURRENCY + '?';
+    const sign = n < 0 ? '-' : '';
+    const abs = Math.abs(n);
+    return sign + CURRENCY + abs.toFixed(2).replace(/\.00$/, '');
+  }
+
+  function looksLikeTotal(label) {
+    return /^(grand\s*)?total\b/i.test(String(label || '').trim());
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  const rowsStack = document.getElementById('rowsStack');
+  const totalAmt  = document.getElementById('totalAmt');
+  const totalSub  = document.getElementById('totalSub');
+  const updatedAt = document.getElementById('updatedAt');
+  const coinsStack = document.getElementById('coinsStack');
+  const reloadBtn = document.getElementById('reloadBtn');
+
+  function showStatus(html, isError) {
+    rowsStack.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'status' + (isError ? ' error' : '');
+    div.innerHTML = html;
+    rowsStack.appendChild(div);
+  }
+
+  function renderJarCoins(fillRatio) {
+    const ratio = Math.max(0, Math.min(1, fillRatio));
+    coinsStack.innerHTML = '';
+    const xMin = 50, xMax = 150;
+    const yBottom = 204, yTop = 50;
+    const fillH = (yBottom - yTop) * ratio;
+    const fillTopY = yBottom - fillH;
+    if (ratio <= 0) return;
+    const colors = ['#d4a341', '#e8b94a', '#a87a1f', '#c89236'];
+    let y = yBottom - 8, rowIdx = 0, i = 0;
+    while (y > fillTopY + 4) {
+      const offset = (rowIdx % 2) * 7;
+      for (let x = xMin + 4 + offset; x < xMax - 4; x += 14) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        el.setAttribute('cx', x);
+        el.setAttribute('cy', y);
+        el.setAttribute('r', 6);
+        el.setAttribute('fill', colors[(rowIdx + Math.floor(x)) % colors.length]);
+        el.setAttribute('stroke', '#4a2c1a');
+        el.setAttribute('stroke-width', '1.2');
+        el.style.animationDelay = (i++ * 0.012) + 's';
+        coinsStack.appendChild(el);
+      }
+      y -= 10;
+      rowIdx++;
+    }
+  }
+
+  function showCoinShower() {
+    const c = document.getElementById('confetti');
+    c.innerHTML = '';
+    for (let i = 0; i < 18; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'coin-fall';
+      coin.style.left = (Math.random() * 100) + '%';
+      coin.style.animationDelay = (Math.random() * 0.6) + 's';
+      coin.style.animationDuration = (1.2 + Math.random() * 0.8) + 's';
+      c.appendChild(coin);
+    }
+    setTimeout(() => { c.innerHTML = ''; }, 2800);
+  }
+
+  function animateNumber(el, target) {
+    const duration = 900;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const v = target * eased;
+      el.textContent = CURRENCY + v.toFixed(2).replace(/\.00$/, '');
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = formatMoney(target);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function render(items, total) {
+    rowsStack.innerHTML = '';
+    if (items.length === 0) {
+      showStatus('🪺 The treasure book is empty so far!');
+      return;
+    }
+    const maxAbs = Math.max(...items.map(it => Math.abs(it.amount)), 0.01);
+
+    items.forEach((it, i) => {
+      const card = document.createElement('div');
+      card.className = 'row-card reveal';
+      card.style.animationDelay = (0.05 + i * 0.07) + 's';
+      const ratio = Math.max(0, it.amount) / maxAbs;
+      card.innerHTML = `
+        <div class="row-icon">${pickIcon(it.label)}</div>
+        <div class="row-body">
+          <div class="row-name">${escapeHtml(it.label)}</div>
+          ${it.meta ? `<div class="row-meta">${escapeHtml(it.meta)}</div>` : ''}
+          <div class="bar-wrap"><div class="bar-fill" style="width:0%"></div></div>
+        </div>
+        <div class="row-amount ${it.amount < 0 ? 'neg' : ''}">${formatMoney(it.amount)}</div>
+      `;
+      rowsStack.appendChild(card);
+      requestAnimationFrame(() => {
+        const fill = card.querySelector('.bar-fill');
+        if (fill) fill.style.width = (ratio * 100).toFixed(1) + '%';
+      });
+    });
+
+    animateNumber(totalAmt, total);
+    totalSub.textContent = items.length + ' good deeds done!';
+    const cap = Math.max(total, 50);
+    renderJarCoins(total / cap);
+    showCoinShower();
+  }
+
+  // GViz returns text like "/*O_o*/\ngoogle.visualization.Query.setResponse({...});"
+  function parseGViz(text) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('Unexpected response from sheet');
+    return JSON.parse(text.slice(start, end + 1));
+  }
+
+  function chooseColumns(cols, rows) {
+    const stats = cols.map((c, ci) => {
+      let numeric = 0, nonEmpty = 0;
+      for (const r of rows) {
+        const cell = r.c && r.c[ci];
+        if (!cell || cell.v == null || cell.v === '') continue;
+        nonEmpty++;
+        if (typeof cell.v === 'number') numeric++;
+      }
+      return { ci, label: c.label || c.id, type: c.type, numeric, nonEmpty,
+               ratio: nonEmpty ? numeric / nonEmpty : 0 };
+    });
+
+    function findCol(spec) {
+      if (spec == null) return -1;
+      const s = String(spec).toLowerCase();
+      const found = stats.find(c =>
+        (c.label || '').toLowerCase() === s ||
+        (cols[c.ci].id || '').toLowerCase() === s
+      );
+      return found ? found.ci : -1;
+    }
+    let labelIdx = findCol(LABEL_COL_OVERRIDE);
+    let amountIdx = findCol(AMOUNT_COL_OVERRIDE);
+
+    if (labelIdx < 0) {
+      const cand = stats.find(c => c.type === 'string') ||
+                   stats.find(c => c.nonEmpty > 0 && c.ratio < 0.5) ||
+                   stats[0];
+      labelIdx = cand.ci;
+    }
+    if (amountIdx < 0) {
+      const numericCols = stats.filter(c =>
+        c.ci !== labelIdx && (c.type === 'number' || c.ratio >= 0.5) && c.nonEmpty > 0
+      );
+      const cand = numericCols[numericCols.length - 1] || stats[stats.length - 1];
+      amountIdx = cand.ci;
+    }
+    return { labelIdx, amountIdx };
+  }
+
+  async function load() {
+    if (!SHEET_ID || SHEET_ID.startsWith('PASTE_')) {
+      showStatus(
+        '✏️ Set <strong>SHEET_ID</strong> at the top of this file<br>' +
+        'and make the sheet "Anyone with the link can view".',
+        true
+      );
+      totalAmt.textContent = '—';
+      totalSub.textContent = 'no sheet connected yet';
+      return;
+    }
+
+    showStatus('📖 Opening the book…');
+    totalSub.textContent = 'counting up the coins…';
+
+    const params = new URLSearchParams();
+    params.set('tqx', 'out:json');
+    if (SHEET_GID != null) params.set('gid', String(SHEET_GID));
+    else if (SHEET_NAME) params.set('sheet', SHEET_NAME);
+    params.set('_', String(Date.now())); // bust cache
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${params}`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 404) throw new Error("Sheet not found. Check the SHEET_ID is correct.");
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("The sheet isn't shared publicly. Go to File → Share → General access → 'Anyone with the link → Viewer'.");
+        }
+        throw new Error('HTTP ' + res.status + ' from Google Sheets');
+      }
+      const text = await res.text();
+
+      // If Google returned an HTML login/error page instead of JSONP, that means
+      // the sheet isn't publicly accessible — surface that clearly.
+      if (text.trim().startsWith('<') || text.includes('<HTML>') || text.includes('<html>')) {
+        throw new Error("The sheet isn't shared publicly. Go to File → Share → General access → 'Anyone with the link → Viewer'.");
+      }
+
+      let data;
+      try {
+        data = parseGViz(text);
+      } catch (e) {
+        console.error('Raw response from Google:', text.slice(0, 500));
+        throw new Error("Couldn't read the sheet's response. Check the browser console (F12) to see what came back.");
+      }
+
+      if (data.status === 'error') {
+        const msg = (data.errors && data.errors[0] && (data.errors[0].detailed_message || data.errors[0].message)) || 'sheet returned an error';
+        throw new Error(msg);
+      }
+
+      const cols = data.table.cols;
+      const rows = data.table.rows || [];
+      if (rows.length === 0) throw new Error('The book is empty.');
+
+      const { labelIdx, amountIdx } = chooseColumns(cols, rows);
+
+      const items = [];
+      let total = 0;
+      let totalFromSheet = null;
+
+      for (const r of rows) {
+        const labelCell = r.c && r.c[labelIdx];
+        const amountCell = r.c && r.c[amountIdx];
+        const label = labelCell ? String(labelCell.f ?? labelCell.v ?? '').trim() : '';
+        const amount = amountCell && typeof amountCell.v === 'number' ? amountCell.v : NaN;
+        if (!label) continue;
+        if (looksLikeTotal(label)) {
+          if (!isNaN(amount)) totalFromSheet = amount;
+          continue;
+        }
+        if (isNaN(amount)) continue;
+        let meta = '';
+        for (let ci = 0; ci < cols.length; ci++) {
+          if (ci === labelIdx || ci === amountIdx) continue;
+          const cell = r.c && r.c[ci];
+          if (cell && cell.v != null && cell.v !== '') {
+            meta = `${cols[ci].label || cols[ci].id}: ${cell.f ?? cell.v}`;
+            break;
+          }
+        }
+        items.push({ label, amount, meta });
+        total += amount;
+      }
+
+      const finalTotal = (totalFromSheet != null) ? totalFromSheet : total;
+      render(items, finalTotal);
+
+      const now = new Date();
+      updatedAt.textContent = `Read on ${now.toLocaleDateString()} at ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+    } catch (err) {
+      showStatus(
+        '😢 Oh no — ' + escapeHtml(err.message) + '<br><br>' +
+        '<small style="opacity:0.7">Open the browser console (F12) for more details.</small>',
+        true
+      );
+      console.error('Failed to load sheet:', err);
+      console.error('Tried URL:', url);
+      totalAmt.textContent = '—';
+      totalSub.textContent = '';
+    }
+  }
+
+  reloadBtn.addEventListener('click', load);
+  load();
+</script>
+</body>
+</html>
