@@ -227,20 +227,42 @@
   .sparkline {
     margin-top: 12px;
     width: 100%;
-    height: 56px;
+    height: 84px;
     display: block;
   }
 
   .sparkline .spark-line {
     fill: none;
     stroke: var(--gold-deep);
-    stroke-width: 2.5;
+    stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
+    stroke-dasharray: 1500;
+    stroke-dashoffset: 1500;
     animation: drawLine 1.4s cubic-bezier(.2,.9,.3,1) 0.2s forwards;
     filter: drop-shadow(0 1px 0 var(--shadow));
+  }
+
+  .sparkline .spark-axis {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    opacity: 0.6;
+  }
+
+  .sparkline .spark-tick {
+    stroke: var(--ink-soft);
+    stroke-width: 1;
+    opacity: 0.4;
+  }
+
+  .sparkline .spark-value {
+    font-family: 'Caveat Brush', cursive;
+    font-size: 14px;
+    fill: var(--ink);
+  }
+  .sparkline .spark-value.latest {
+    fill: var(--gold-deep);
+    font-size: 16px;
   }
 
   .sparkline .spark-area {
@@ -250,9 +272,9 @@
   }
 
   .sparkline .spark-dot {
-    fill: var(--berry);
-    stroke: var(--ink);
-    stroke-width: 1.5;
+    fill: #fff8e8;
+    stroke: var(--gold-deep);
+    stroke-width: 2;
     opacity: 0;
     animation: dotIn 0.4s cubic-bezier(.4,1.6,.5,1) 1.4s forwards;
   }
@@ -260,7 +282,7 @@
   .sparkline .spark-dot.latest {
     fill: var(--gold);
     stroke: var(--ink);
-    stroke-width: 2;
+    stroke-width: 2.5;
     transform-origin: center;
     transform-box: fill-box;
     animation:
@@ -271,7 +293,7 @@
   .sparkline .spark-pulse {
     fill: none;
     stroke: var(--gold);
-    stroke-width: 2;
+    stroke-width: 2.5;
     opacity: 0;
     transform-origin: center;
     transform-box: fill-box;
@@ -306,8 +328,8 @@
     50%      { transform: scale(1.35); }
   }
   @keyframes ringPulse {
-    0%   { opacity: 0.7; r: 5; }
-    100% { opacity: 0; r: 16; }
+    0%   { opacity: 0.8; r: 6; }
+    100% { opacity: 0; r: 18; }
   }
 
   .sparkline-empty {
@@ -435,7 +457,7 @@
     </div>
   </section>
 
-  <h2 class="section-title">My good deeds</h2>
+  <h2 class="section-title">My deeds balance</h2>
   <div class="stack" id="rowsStack">
     <div class="status" id="statusBox">📖 Opening the book…</div>
   </div>
@@ -732,6 +754,8 @@
   }
 
   // ----- Render a sparkline into a host element -----
+  // X-axis is INDEX-based (representative): each deed gets equal horizontal space.
+  // Flat periods between deeds are skipped — every point is a real event.
   function renderSparkline(host, series, personKey) {
     host.innerHTML = '';
     if (!series || series.length === 0) {
@@ -742,69 +766,113 @@
       return;
     }
     if (series.length === 1) {
-      // single point — show a tiny note instead of a "line"
       const empty = document.createElement('div');
       empty.className = 'sparkline-empty';
-      empty.textContent = '✨ just getting started!';
+      empty.textContent = `✨ just getting started — S/${series[0].cumulative}!`;
       host.appendChild(empty);
       return;
     }
 
-    const W = 280, H = 56;
-    const pad = { l: 4, r: 14, t: 8, b: 12 };
+    const W = 300, H = 84;
+    const pad = { l: 30, r: 38, t: 14, b: 18 };
     const innerW = W - pad.l - pad.r;
     const innerH = H - pad.t - pad.b;
 
-    const xs = series.map(p => p.date.getTime());
     const ys = series.map(p => p.cumulative);
-    const xMin = Math.min(...xs), xMax = Math.max(...xs);
     const yMin = Math.min(0, ...ys);
     const yMax = Math.max(...ys, yMin + 1);
-    const xSpan = (xMax - xMin) || 1;
     const ySpan = (yMax - yMin) || 1;
 
-    const points = series.map(p => ({
-      x: pad.l + ((p.date.getTime() - xMin) / xSpan) * innerW,
+    // INDEX-BASED X SPACING — each deed = one equal step
+    const n = series.length;
+    const xStep = n > 1 ? innerW / (n - 1) : 0;
+
+    const points = series.map((p, i) => ({
+      x: pad.l + i * xStep,
       y: pad.t + innerH - ((p.cumulative - yMin) / ySpan) * innerH,
       ...p
     }));
 
-    const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
-    const areaPath = path + ` L ${points[points.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L ${points[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
+    // Smooth path (gentle curve between points) for readability at low data counts
+    function smoothPath(pts) {
+      if (pts.length < 2) return '';
+      if (pts.length === 2) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`;
+      let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2] || p2;
+        // Catmull-Rom-ish: tension 0.5
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return d;
+    }
 
-    const gradId = 'sparkGradient-' + personKey.replace(/[^a-z0-9]/gi, '');
+    const linePath = smoothPath(points);
+    const baseY = pad.t + innerH;
+    const areaPath = linePath + ` L ${points[points.length - 1].x.toFixed(1)} ${baseY.toFixed(1)} L ${points[0].x.toFixed(1)} ${baseY.toFixed(1)} Z`;
 
     const last = points[points.length - 1];
-    const firstDate = series[0].date;
-    const lastDate = series[series.length - 1].date;
-    const fmtDate = d => (d.getMonth() + 1) + '/' + d.getDate();
+    const first = points[0];
+    const gradId = 'sparkGradient-' + personKey.replace(/[^a-z0-9]/gi, '');
 
-    // Baseline at y=0 if applicable
+    // Zero baseline only matters if the line crosses zero
     const zeroY = pad.t + innerH - ((0 - yMin) / ySpan) * innerH;
-    const showBaseline = yMin < 0 && yMax > 0;
+    const showZeroBaseline = yMin < 0 && yMax > 0;
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('class', 'sparkline');
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.setAttribute('aria-label', 'Earnings over time');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('aria-label', `${personKey}'s earnings over ${n} deeds`);
+
+    // Build SVG content
+    const middleDots = points.slice(1, -1).map(p =>
+      `<circle class="spark-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5"/>`
+    ).join('');
 
     svg.innerHTML = `
       <defs>
         <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stop-color="#d4a341" stop-opacity="0.7"/>
+          <stop offset="0%"  stop-color="#d4a341" stop-opacity="0.55"/>
           <stop offset="100%" stop-color="#d4a341" stop-opacity="0"/>
         </linearGradient>
       </defs>
-      ${showBaseline ? `<line class="spark-baseline" x1="${pad.l}" y1="${zeroY}" x2="${W - pad.r}" y2="${zeroY}"/>` : ''}
+
+      <!-- X axis line at the bottom of the chart area -->
+      <line class="spark-axis" x1="${pad.l}" y1="${baseY.toFixed(1)}" x2="${(W - pad.r).toFixed(1)}" y2="${baseY.toFixed(1)}"/>
+
+      <!-- Zero crossing line if data goes negative -->
+      ${showZeroBaseline ? `<line class="spark-tick" x1="${pad.l}" y1="${zeroY.toFixed(1)}" x2="${(W - pad.r).toFixed(1)}" y2="${zeroY.toFixed(1)}" stroke-dasharray="3 3"/>` : ''}
+
+      <!-- Filled area under the line -->
       <path class="spark-area" d="${areaPath}" fill="url(#${gradId})"/>
-      <path class="spark-line" d="${path}"/>
-      ${points.slice(0, -1).map(p => `<circle class="spark-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5"/>`).join('')}
-      <circle class="spark-pulse" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="5"/>
-      <circle class="spark-dot latest" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4"/>
-      <text class="spark-label" x="${pad.l}" y="${H - 2}" text-anchor="start">${fmtDate(firstDate)}</text>
-      <text class="spark-label" x="${W - pad.r}" y="${H - 2}" text-anchor="end">${fmtDate(lastDate)}</text>
+
+      <!-- The line itself -->
+      <path class="spark-line" d="${linePath}"/>
+
+      <!-- Intermediate points -->
+      ${middleDots}
+
+      <!-- Starting value label -->
+      <text class="spark-value" x="${(pad.l - 4).toFixed(1)}" y="${(first.y + 4).toFixed(1)}" text-anchor="end">S/${first.cumulative}</text>
+
+      <!-- First-point dot -->
+      <circle class="spark-dot" cx="${first.x.toFixed(1)}" cy="${first.y.toFixed(1)}" r="3.5"/>
+
+      <!-- Latest point: pulse ring + dot + value -->
+      <circle class="spark-pulse" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="6"/>
+      <circle class="spark-dot latest" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="5.5"/>
+      <text class="spark-value latest" x="${(last.x + 8).toFixed(1)}" y="${(last.y + 5).toFixed(1)}" text-anchor="start">S/${last.cumulative}</text>
+
+      <!-- Axis footer: count of deeds -->
+      <text class="spark-label" x="${(W / 2).toFixed(1)}" y="${(H - 3).toFixed(1)}" text-anchor="middle">${n} deeds over time →</text>
     `;
     host.appendChild(svg);
   }
