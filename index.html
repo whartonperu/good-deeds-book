@@ -224,6 +224,101 @@
     transition: width 0.9s cubic-bezier(.2,.9,.3,1);
   }
 
+  .sparkline {
+    margin-top: 12px;
+    width: 100%;
+    height: 56px;
+    display: block;
+  }
+
+  .sparkline .spark-line {
+    fill: none;
+    stroke: var(--gold-deep);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawLine 1.4s cubic-bezier(.2,.9,.3,1) 0.2s forwards;
+    filter: drop-shadow(0 1px 0 var(--shadow));
+  }
+
+  .sparkline .spark-area {
+    fill: url(#sparkGradient);
+    opacity: 0;
+    animation: fadeArea 0.6s ease-out 1.2s forwards;
+  }
+
+  .sparkline .spark-dot {
+    fill: var(--berry);
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    opacity: 0;
+    animation: dotIn 0.4s cubic-bezier(.4,1.6,.5,1) 1.4s forwards;
+  }
+
+  .sparkline .spark-dot.latest {
+    fill: var(--gold);
+    stroke: var(--ink);
+    stroke-width: 2;
+    transform-origin: center;
+    transform-box: fill-box;
+    animation:
+      dotIn 0.4s cubic-bezier(.4,1.6,.5,1) 1.4s forwards,
+      pulseDot 1.8s ease-in-out 1.8s infinite;
+  }
+
+  .sparkline .spark-pulse {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 2;
+    opacity: 0;
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: ringPulse 1.8s ease-out 1.8s infinite;
+  }
+
+  .sparkline .spark-baseline {
+    stroke: var(--ink-soft);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    opacity: 0.3;
+  }
+
+  .sparkline .spark-label {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 11px;
+    fill: var(--ink-soft);
+  }
+
+  @keyframes drawLine {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes fadeArea {
+    to { opacity: 0.35; }
+  }
+  @keyframes dotIn {
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulseDot {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.35); }
+  }
+  @keyframes ringPulse {
+    0%   { opacity: 0.7; r: 5; }
+    100% { opacity: 0; r: 16; }
+  }
+
+  .sparkline-empty {
+    margin-top: 10px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    opacity: 0.7;
+  }
+
   .status {
     text-align: center;
     padding: 40px 20px;
@@ -371,6 +466,10 @@
   const SHEET_NAME = 'Pivot Table 1';   // tab name
   const SHEET_GID  = 34893663;   // OR a gid number, e.g. 123456789. Use null to ignore.
 
+  // Source data tab (form responses) — used for the per-child sparklines
+  const RESPONSES_NAME = 'Form Responses 1';
+  const RESPONSES_GID  = null;   // optional override
+
   // Optional column overrides. Use the column header text or column letter.
   // Leave null to auto-detect (first text column = label, last numeric = amount).
   const LABEL_COL_OVERRIDE  = null;
@@ -504,6 +603,7 @@
     items.forEach((it, i) => {
       const card = document.createElement('div');
       card.className = 'row-card reveal';
+      card.dataset.person = it.label;
       card.style.animationDelay = (0.05 + i * 0.07) + 's';
       const ratio = Math.max(0, it.amount) / maxAbs;
       card.innerHTML = `
@@ -512,6 +612,7 @@
           <div class="row-name">${escapeHtml(it.label)}</div>
           ${it.meta ? `<div class="row-meta">${escapeHtml(it.meta)}</div>` : ''}
           <div class="bar-wrap"><div class="bar-fill" style="width:0%"></div></div>
+          <div class="sparkline-host"></div>
         </div>
         <div class="row-amount ${it.amount < 0 ? 'neg' : ''}">${formatMoney(it.amount)}</div>
       `;
@@ -529,7 +630,188 @@
     showCoinShower();
   }
 
+  // Inject the cumulative sparklines into already-rendered cards.
+  // Called after the form-responses fetch completes.
+  function injectSparklines(seriesByPerson) {
+    const cards = rowsStack.querySelectorAll('.row-card');
+    cards.forEach(card => {
+      const person = card.dataset.person;
+      const host = card.querySelector('.sparkline-host');
+      if (!host) return;
+      // Case-insensitive match — pivot may have "Fernanda" while form has "fernanda"
+      let series = seriesByPerson.get(person);
+      if (!series) {
+        for (const [k, v] of seriesByPerson) {
+          if (k.toLowerCase() === person.toLowerCase()) { series = v; break; }
+        }
+      }
+      renderSparkline(host, series, person);
+    });
+  }
+
   // GViz returns text like "/*O_o*/\ngoogle.visualization.Query.setResponse({...});"
+
+  // ----- Parse a soles amount out of strings like "Small 1s/", "Medium 2s/", "Large -5s/", "Medium - 2s/" -----
+  function parseSoles(label) {
+    if (label == null) return NaN;
+    const s = String(label);
+    // Look for a number (possibly negative, possibly with decimals) followed loosely by 's'
+    // Handles: "1s/", "-5s/", "Medium 2s/", "Medium - 2s/", "Small -1s/"
+    const m = s.match(/(-?\s*\d+(?:\.\d+)?)\s*s\s*\//i);
+    if (!m) return NaN;
+    const cleaned = m[1].replace(/\s+/g, '');
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? NaN : n;
+  }
+
+  // ----- Build per-person cumulative time series from raw form responses -----
+  // rows: array of GViz row objects from "Form Responses 1"
+  // cols: array of GViz column descriptors
+  // Returns: Map<personName, Array<{date: Date, cumulative: number, delta: number}>>
+  function buildSeriesByPerson(cols, rows) {
+    // Find column indices by header label
+    function findCol(labelMatcher) {
+      for (let i = 0; i < cols.length; i++) {
+        const lbl = (cols[i].label || cols[i].id || '').toLowerCase();
+        if (labelMatcher(lbl)) return i;
+      }
+      return -1;
+    }
+    const tsIdx     = findCol(l => l.includes('timestamp') || l.includes('date'));
+    const whoIdx    = findCol(l => l === 'who' || l.includes('who') || l.includes('name'));
+    const amountIdx = findCol(l => l.includes('deed') || l.includes('amount') || l.includes('size'));
+
+    if (tsIdx < 0 || whoIdx < 0 || amountIdx < 0) return new Map();
+
+    // Collect (date, who, delta) entries
+    const entries = [];
+    for (const r of rows) {
+      if (!r.c) continue;
+      const tsCell = r.c[tsIdx];
+      const whoCell = r.c[whoIdx];
+      const amtCell = r.c[amountIdx];
+      if (!tsCell || !whoCell || !amtCell) continue;
+
+      // Parse timestamp — GViz date types come as "Date(YYYY,M,D,...)" strings
+      let dt = null;
+      const tsv = tsCell.v;
+      if (tsv instanceof Date) dt = tsv;
+      else if (typeof tsv === 'string') {
+        const m = tsv.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+        if (m) {
+          dt = new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+        } else {
+          const parsed = new Date(tsv);
+          if (!isNaN(parsed.getTime())) dt = parsed;
+        }
+      } else if (typeof tsv === 'number') {
+        dt = new Date(tsv);
+      }
+      if (!dt || isNaN(dt.getTime())) continue;
+
+      const who = String(whoCell.f ?? whoCell.v ?? '').trim();
+      if (!who) continue;
+
+      const amtRaw = amtCell.f ?? amtCell.v;
+      const delta = parseSoles(amtRaw);
+      if (isNaN(delta)) continue;
+
+      entries.push({ date: dt, who, delta });
+    }
+
+    // Sort by date and build per-person running totals
+    entries.sort((a, b) => a.date - b.date);
+    const map = new Map();
+    for (const e of entries) {
+      const prev = map.get(e.who) || [];
+      const last = prev.length ? prev[prev.length - 1].cumulative : 0;
+      prev.push({ date: e.date, delta: e.delta, cumulative: last + e.delta });
+      map.set(e.who, prev);
+    }
+    return map;
+  }
+
+  // ----- Render a sparkline into a host element -----
+  function renderSparkline(host, series, personKey) {
+    host.innerHTML = '';
+    if (!series || series.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'sparkline-empty';
+      empty.textContent = '✨ first deed coming soon';
+      host.appendChild(empty);
+      return;
+    }
+    if (series.length === 1) {
+      // single point — show a tiny note instead of a "line"
+      const empty = document.createElement('div');
+      empty.className = 'sparkline-empty';
+      empty.textContent = '✨ just getting started!';
+      host.appendChild(empty);
+      return;
+    }
+
+    const W = 280, H = 56;
+    const pad = { l: 4, r: 14, t: 8, b: 12 };
+    const innerW = W - pad.l - pad.r;
+    const innerH = H - pad.t - pad.b;
+
+    const xs = series.map(p => p.date.getTime());
+    const ys = series.map(p => p.cumulative);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(0, ...ys);
+    const yMax = Math.max(...ys, yMin + 1);
+    const xSpan = (xMax - xMin) || 1;
+    const ySpan = (yMax - yMin) || 1;
+
+    const points = series.map(p => ({
+      x: pad.l + ((p.date.getTime() - xMin) / xSpan) * innerW,
+      y: pad.t + innerH - ((p.cumulative - yMin) / ySpan) * innerH,
+      ...p
+    }));
+
+    const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    const areaPath = path + ` L ${points[points.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L ${points[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
+
+    const gradId = 'sparkGradient-' + personKey.replace(/[^a-z0-9]/gi, '');
+
+    const last = points[points.length - 1];
+    const firstDate = series[0].date;
+    const lastDate = series[series.length - 1].date;
+    const fmtDate = d => (d.getMonth() + 1) + '/' + d.getDate();
+
+    // Baseline at y=0 if applicable
+    const zeroY = pad.t + innerH - ((0 - yMin) / ySpan) * innerH;
+    const showBaseline = yMin < 0 && yMax > 0;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'sparkline');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('aria-label', 'Earnings over time');
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stop-color="#d4a341" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="#d4a341" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${showBaseline ? `<line class="spark-baseline" x1="${pad.l}" y1="${zeroY}" x2="${W - pad.r}" y2="${zeroY}"/>` : ''}
+      <path class="spark-area" d="${areaPath}" fill="url(#${gradId})"/>
+      <path class="spark-line" d="${path}"/>
+      ${points.slice(0, -1).map(p => `<circle class="spark-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5"/>`).join('')}
+      <circle class="spark-pulse" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="5"/>
+      <circle class="spark-dot latest" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4"/>
+      <text class="spark-label" x="${pad.l}" y="${H - 2}" text-anchor="start">${fmtDate(firstDate)}</text>
+      <text class="spark-label" x="${W - pad.r}" y="${H - 2}" text-anchor="end">${fmtDate(lastDate)}</text>
+    `;
+    host.appendChild(svg);
+  }
+
+  // -------------------------------------------------------------------------
+
+  // GViz JSONP-wrapped response parser
   function parseGViz(text) {
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
@@ -576,6 +858,27 @@
       amountIdx = cand.ci;
     }
     return { labelIdx, amountIdx };
+  }
+
+  async function loadResponses() {
+    const params = new URLSearchParams();
+    params.set('tqx', 'out:json');
+    if (RESPONSES_GID != null) params.set('gid', String(RESPONSES_GID));
+    else params.set('sheet', RESPONSES_NAME);
+    params.set('_', String(Date.now()));
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${params}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' from responses tab');
+    const text = await res.text();
+    if (text.trim().startsWith('<')) throw new Error('responses tab not accessible');
+    const data = parseGViz(text);
+    if (data.status === 'error') {
+      const msg = (data.errors && data.errors[0] && (data.errors[0].detailed_message || data.errors[0].message)) || 'responses tab returned an error';
+      throw new Error(msg);
+    }
+    const seriesByPerson = buildSeriesByPerson(data.table.cols, data.table.rows || []);
+    injectSparklines(seriesByPerson);
   }
 
   async function load() {
@@ -669,6 +972,12 @@
 
       const now = new Date();
       updatedAt.textContent = `Read on ${now.toLocaleDateString()} at ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+
+      // Fire-and-forget: pull the raw form responses for the per-person sparklines.
+      // Failures here don't break the main view.
+      loadResponses().catch(err => {
+        console.warn('Sparkline data unavailable:', err);
+      });
     } catch (err) {
       showStatus(
         '😢 Oh no — ' + escapeHtml(err.message) + '<br><br>' +
